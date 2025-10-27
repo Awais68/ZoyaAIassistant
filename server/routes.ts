@@ -301,6 +301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   new Date(aiResponse.intent.parameters.dueDate) : undefined,
               });
               executionResult = task;
+              aiResponse.response = `Task created successfully: "${task.title}"`;
               broadcastUpdate('task_created', task);
             }
             break;
@@ -339,6 +340,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
               aiResponse.response = `You have ${unreadEmails.length} unread email(s). The most recent is from ${unreadEmails[0].sender}: "${unreadEmails[0].subject}"`;
             } else {
               aiResponse.response = "You have no unread emails.";
+            }
+            break;
+
+          case "check_tasks":
+            const allTasks = await storage.getTasks();
+            executionResult = allTasks;
+            // Enhance the response to include task details
+            if (allTasks && allTasks.length > 0) {
+              const pendingTasks = allTasks.filter((t: any) => t.status === 'pending');
+              if (pendingTasks.length > 0) {
+                const taskList = pendingTasks.slice(0, 3).map((t: any) =>
+                  `${t.title}${t.priority ? ` (${t.priority})` : ''}`
+                ).join(', ');
+                aiResponse.response = `You have ${pendingTasks.length} pending task(s): ${taskList}${pendingTasks.length > 3 ? '...' : ''}`;
+              } else {
+                aiResponse.response = "All your tasks are completed! Great job!";
+              }
+            } else {
+              aiResponse.response = "You have no tasks. Would you like to create one?";
             }
             break;
 

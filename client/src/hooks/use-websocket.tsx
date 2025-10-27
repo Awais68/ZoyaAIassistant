@@ -13,12 +13,22 @@ export function useWebSocket() {
   const reconnectAttempts = useRef(0);
 
   const connect = () => {
+    // Disable WebSocket in production (Vercel doesn't support it)
+    const isProduction = window.location.hostname.includes('vercel.app') ||
+      window.location.hostname !== 'localhost';
+
+    if (isProduction) {
+      console.log('WebSocket disabled in production environment');
+      setConnectionStatus('Closed');
+      return;
+    }
+
     try {
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const wsUrl = `${protocol}//${window.location.host}/ws`;
-      
+
       const ws = new WebSocket(wsUrl);
-      
+
       ws.onopen = () => {
         setConnectionStatus('Open');
         reconnectAttempts.current = 0;
@@ -28,7 +38,7 @@ export function useWebSocket() {
       ws.onclose = () => {
         setConnectionStatus('Closed');
         setSocket(null);
-        
+
         // Attempt to reconnect with exponential backoff
         if (reconnectAttempts.current < 5) {
           const delay = Math.pow(2, reconnectAttempts.current) * 1000;

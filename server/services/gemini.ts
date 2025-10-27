@@ -34,7 +34,7 @@ export interface AIResponse {
 // Simple pattern matching fallback
 function fallbackCommandProcessing(input: string, language: string): AIResponse {
   const lowerInput = input.toLowerCase();
-  
+
   // Pattern matching for common commands
   if (lowerInput.includes('meeting') || lowerInput.includes('schedule')) {
     return {
@@ -44,15 +44,15 @@ function fallbackCommandProcessing(input: string, language: string): AIResponse 
         language,
         confidence: 0.6,
       },
-      response: language === 'ur' 
+      response: language === 'ur'
         ? 'میں آپ کی کیلنڈر چیک کر رہی ہوں'
         : language === 'roman-ur'
-        ? 'Main aap ki calendar check kar rahi hun'
-        : "Let me check your calendar",
+          ? 'Main aap ki calendar check kar rahi hun'
+          : "Let me check your calendar",
       language,
     };
   }
-  
+
   if (lowerInput.includes('email') || lowerInput.includes('mail')) {
     return {
       intent: {
@@ -64,13 +64,51 @@ function fallbackCommandProcessing(input: string, language: string): AIResponse 
       response: language === 'ur'
         ? 'میں آپ کے ای میل چیک کر رہی ہوں'
         : language === 'roman-ur'
-        ? 'Main aap ke emails check kar rahi hun'
-        : "Let me check your emails",
+          ? 'Main aap ke emails check kar rahi hun'
+          : "Let me check your emails",
       language,
     };
   }
-  
-  if (lowerInput.includes('task') || lowerInput.includes('todo')) {
+
+  // Create task/note detection
+  if (lowerInput.match(/create|add|make|save|take|write|new.*(?:task|todo|note|reminder)/i) ||
+    lowerInput.match(/(?:task|todo|note|reminder).*(?:create|add|make|save|take|write|new)/i)) {
+    // Extract the task title from the input
+    let title = input;
+    const patterns = [
+      /(?:create|add|make|save|take|write|new)\s+(?:a\s+)?(?:task|todo|note|reminder)?\s*(?:to|for|about|that|:)?\s*(.+)/i,
+      /(?:task|todo|note|reminder)\s*(?:to|for|about|that|:)?\s*(.+)/i,
+    ];
+
+    for (const pattern of patterns) {
+      const match = input.match(pattern);
+      if (match && match[1]) {
+        title = match[1].trim();
+        break;
+      }
+    }
+
+    return {
+      intent: {
+        action: 'create_task',
+        parameters: {
+          title: title,
+          description: title
+        },
+        language,
+        confidence: 0.7,
+      },
+      response: language === 'ur'
+        ? `ٹاسک بنایا جا رہا ہے: ${title}`
+        : language === 'roman-ur'
+          ? `Task banaya ja raha hai: ${title}`
+          : `Creating task: ${title}`,
+      language,
+    };
+  }
+
+  // Check tasks/notes
+  if (lowerInput.includes('task') || lowerInput.includes('todo') || lowerInput.includes('note')) {
     return {
       intent: {
         action: 'check_tasks',
@@ -81,12 +119,12 @@ function fallbackCommandProcessing(input: string, language: string): AIResponse 
       response: language === 'ur'
         ? 'میں آپ کے ٹاسک چیک کر رہی ہوں'
         : language === 'roman-ur'
-        ? 'Main aap ke tasks check kar rahi hun'
-        : "Let me check your tasks",
+          ? 'Main aap ke tasks check kar rahi hun'
+          : "Let me check your tasks",
       language,
     };
   }
-  
+
   // Greeting detection
   if (lowerInput.match(/^(hi|hello|hey|salam|assalam)/)) {
     return {
@@ -99,12 +137,12 @@ function fallbackCommandProcessing(input: string, language: string): AIResponse 
       response: language === 'ur'
         ? 'السلام علیکم! میں زویا ہوں، آپ کی ذاتی معاون۔ میں کیسے مدد کر سکتی ہوں؟'
         : language === 'roman-ur'
-        ? 'Assalam o alaikum! Main Zoya hun, aap ki personal assistant. Main kaise madad kar sakti hun?'
-        : "Hello! I'm Zoya, your personal assistant. How can I help you today?",
+          ? 'Assalam o alaikum! Main Zoya hun, aap ki personal assistant. Main kaise madad kar sakti hun?'
+          : "Hello! I'm Zoya, your personal assistant. How can I help you today?",
       language,
     };
   }
-  
+
   // Default response
   return {
     intent: {
@@ -116,8 +154,8 @@ function fallbackCommandProcessing(input: string, language: string): AIResponse 
     response: language === 'ur'
       ? 'معذرت، میں آپ کی مدد کرنے کی کوشش کر رہی ہوں۔ براہ کرم زیادہ تفصیل سے بتائیں'
       : language === 'roman-ur'
-      ? 'Maazrat, main aap ki madad karne ki koshish kar rahi hun. Meherbani karke zyada tafseel se batayein'
-      : "I'm here to help! Could you please be more specific about what you need?",
+        ? 'Maazrat, main aap ki madad karne ki koshish kar rahi hun. Meherbani karke zyada tafseel se batayein'
+        : "I'm here to help! Could you please be more specific about what you need?",
     language,
   };
 }
@@ -196,14 +234,14 @@ export async function processNaturalLanguageCommand(
     };
   } catch (error: any) {
     console.error("Gemini processing error:", error);
-    
+
     // Mark API as unavailable if it's a 404 or authentication error
     if (error?.status === 404 || error?.status === 401 || error?.status === 403) {
       apiAvailable = false;
       lastApiCheck = now;
       console.warn('Gemini API unavailable, switching to fallback mode');
     }
-    
+
     // Use fallback instead of generic error message
     return fallbackCommandProcessing(input, language);
   }
@@ -235,7 +273,7 @@ export async function generateEmailContent(
     return text;
   } catch (error) {
     console.error("Gemini email generation error:", error);
-    
+
     // Return a basic template instead of error message
     return `Dear [Recipient],
 
@@ -280,12 +318,12 @@ export async function summarizeEmails(
     return text;
   } catch (error) {
     console.error("Gemini email summarization error:", error);
-    
+
     // Return basic summary instead of error
-    const summary = emails.map((email, idx) => 
+    const summary = emails.map((email, idx) =>
       `${idx + 1}. From ${email.sender}: ${email.subject}`
     ).join('\n');
-    
+
     return `You have ${emails.length} email(s):\n\n${summary}`;
   }
 }
