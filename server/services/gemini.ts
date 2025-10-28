@@ -1,14 +1,20 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
+// Initialize the Gemini client lazily and avoid throwing at module import time.
+// Serverless platforms (like Vercel) will crash the function if an exception is
+// thrown during module evaluation — prefer returning graceful fallbacks instead.
 const apiKey = process.env.GEMINI_API_KEY;
-
-if (!apiKey) {
-  throw new Error(
-    "Gemini API key is not configured. Please set the GEMINI_API_KEY environment variable."
-  );
+let genAI: GoogleGenerativeAI | null = null;
+if (apiKey) {
+  try {
+    genAI = new GoogleGenerativeAI(apiKey);
+  } catch (err) {
+    console.warn('Failed to initialize Gemini client:', err);
+    genAI = null;
+  }
+} else {
+  console.warn('GEMINI_API_KEY not set — running in fallback-only mode');
 }
-
-const genAI = new GoogleGenerativeAI(apiKey);
 
 const TEXT_MODEL = "gemini-pro";
 const CHAT_MODEL = "gemini-pro";
@@ -170,6 +176,10 @@ export async function processNaturalLanguageCommand(
     console.log('Using fallback - API temporarily unavailable');
     return fallbackCommandProcessing(input, language);
   }
+  // If the Gemini client isn't initialized, fall back to pattern matching.
+  if (!genAI) {
+    return fallbackCommandProcessing(input, language);
+  }
 
   try {
     const model = genAI.getGenerativeModel({
@@ -253,6 +263,11 @@ export async function generateEmailContent(
   language: string = "en"
 ): Promise<string> {
   try {
+    if (!genAI) {
+      console.warn('generateEmailContent: Gemini client not available, returning basic template');
+      return `Dear [Recipient],\n\n${context}\n\nSubject: ${subject}\n\nBest regards,\n[Your Name]`;
+    }
+
     const model = genAI.getGenerativeModel({ model: TEXT_MODEL });
 
     const prompt = `Generate professional email content based on the subject and context provided. 
@@ -291,6 +306,12 @@ export async function summarizeEmails(
   language: string = "en"
 ): Promise<string> {
   try {
+    if (!genAI) {
+      console.warn('summarizeEmails: Gemini client not available, returning basic summary');
+      const summary = emails.map((email, idx) => `${idx + 1}. From ${email.sender}: ${email.subject}`).join('\n');
+      return `You have ${emails.length} email(s):\n\n${summary}`;
+    }
+
     const model = genAI.getGenerativeModel({ model: TEXT_MODEL });
 
     const emailText = emails
@@ -331,6 +352,7 @@ export async function summarizeEmails(
 // Health check function
 export async function checkGeminiHealth(): Promise<boolean> {
   try {
+    if (!genAI) return false;
     const model = genAI.getGenerativeModel({ model: CHAT_MODEL });
     await model.generateContent("test");
     return true;

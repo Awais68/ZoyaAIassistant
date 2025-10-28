@@ -1,5 +1,5 @@
-import { 
-  type User, 
+import {
+  type User,
   type InsertUser,
   type Email,
   type InsertEmail,
@@ -105,7 +105,7 @@ export class MemStorage implements IStorage {
     // Sample calendar events
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
+
     const sampleEvents: InsertCalendarEvent[] = [
       {
         title: "Team Standup with Development Team",
@@ -187,7 +187,7 @@ export class MemStorage implements IStorage {
 
   // Emails
   async getEmails(): Promise<Email[]> {
-    return Array.from(this.emails.values()).sort((a, b) => 
+    return Array.from(this.emails.values()).sort((a, b) =>
       new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()
     );
   }
@@ -200,8 +200,8 @@ export class MemStorage implements IStorage {
 
   async createEmail(insertEmail: InsertEmail): Promise<Email> {
     const id = randomUUID();
-    const email: Email = { 
-      ...insertEmail, 
+    const email: Email = {
+      ...insertEmail,
       id,
       createdAt: new Date()
     };
@@ -219,7 +219,7 @@ export class MemStorage implements IStorage {
 
   // Calendar Events
   async getCalendarEvents(): Promise<CalendarEvent[]> {
-    return Array.from(this.calendarEvents.values()).sort((a, b) => 
+    return Array.from(this.calendarEvents.values()).sort((a, b) =>
       new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
     );
   }
@@ -247,8 +247,8 @@ export class MemStorage implements IStorage {
 
   async createCalendarEvent(insertEvent: InsertCalendarEvent): Promise<CalendarEvent> {
     const id = randomUUID();
-    const event: CalendarEvent = { 
-      ...insertEvent, 
+    const event: CalendarEvent = {
+      ...insertEvent,
       id,
       createdAt: new Date()
     };
@@ -262,7 +262,7 @@ export class MemStorage implements IStorage {
 
   // Tasks
   async getTasks(): Promise<Task[]> {
-    return Array.from(this.tasks.values()).sort((a, b) => 
+    return Array.from(this.tasks.values()).sort((a, b) =>
       new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()
     );
   }
@@ -282,8 +282,8 @@ export class MemStorage implements IStorage {
 
   async createTask(insertTask: InsertTask): Promise<Task> {
     const id = randomUUID();
-    const task: Task = { 
-      ...insertTask, 
+    const task: Task = {
+      ...insertTask,
       id,
       createdAt: new Date()
     };
@@ -307,7 +307,7 @@ export class MemStorage implements IStorage {
 
   // Reminders
   async getReminders(): Promise<Reminder[]> {
-    return Array.from(this.reminders.values()).sort((a, b) => 
+    return Array.from(this.reminders.values()).sort((a, b) =>
       new Date(a.reminderTime).getTime() - new Date(b.reminderTime).getTime()
     );
   }
@@ -320,8 +320,8 @@ export class MemStorage implements IStorage {
 
   async createReminder(insertReminder: InsertReminder): Promise<Reminder> {
     const id = randomUUID();
-    const reminder: Reminder = { 
-      ...insertReminder, 
+    const reminder: Reminder = {
+      ...insertReminder,
       id,
       createdAt: new Date()
     };
@@ -339,15 +339,15 @@ export class MemStorage implements IStorage {
 
   // Command History
   async getCommandHistory(): Promise<CommandHistory[]> {
-    return Array.from(this.commandHistory.values()).sort((a, b) => 
+    return Array.from(this.commandHistory.values()).sort((a, b) =>
       new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()
     );
   }
 
   async createCommandHistory(insertCommand: InsertCommandHistory): Promise<CommandHistory> {
     const id = randomUUID();
-    const command: CommandHistory = { 
-      ...insertCommand, 
+    const command: CommandHistory = {
+      ...insertCommand,
       id,
       createdAt: new Date()
     };
@@ -360,4 +360,25 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Export MemStorage for use as a fallback by PostgresStorage
+export const memStorage = new MemStorage();
+
+// Dynamically select storage backend. If a DATABASE_URL environment variable
+// is provided, use PostgresStorage (persisting tasks and command history).
+// Otherwise fall back to the in-memory implementation.
+let selectedStorage: IStorage = memStorage;
+if (process.env.DATABASE_URL) {
+  try {
+    // Lazy import to avoid adding pg dependency during environments that don't need it
+    // (but here we already installed pg). Import PostgresStorage and instantiate.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { PostgresStorage } = require('./postgresStorage');
+    selectedStorage = new PostgresStorage(process.env.DATABASE_URL, memStorage) as IStorage;
+    console.log('Using PostgresStorage for persistent tasks and command history');
+  } catch (err) {
+    console.warn('Failed to initialize PostgresStorage, falling back to memStorage:', err);
+    selectedStorage = memStorage;
+  }
+}
+
+export const storage: IStorage = selectedStorage;
