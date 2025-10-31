@@ -40,7 +40,7 @@ export default function TextInput({ language }: TextInputProps) {
 
   const handleSubmit = () => {
     if (!input.trim()) return;
-    
+
     processCommandMutation.mutate({
       input: input.trim(),
       language,
@@ -92,11 +92,11 @@ export default function TextInput({ language }: TextInputProps) {
             <Input
               type="text"
               placeholder={
-                language === "ur" 
+                language === "ur"
                   ? "اپنا کمانڈ ٹائپ کریں..."
                   : language === "roman-ur"
-                  ? "Apna command type karo..."
-                  : "Type your command... (e.g., 'Schedule meeting with John tomorrow at 2 PM')"
+                    ? "Apna command type karo..."
+                    : "Type your command... (e.g., 'Schedule meeting with John tomorrow at 2 PM')"
               }
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -115,9 +115,9 @@ export default function TextInput({ language }: TextInputProps) {
               <i className="fas fa-paper-plane"></i>
             </Button>
           </div>
-          
+
           <div className="flex items-center space-x-2">
-            <Button 
+            <Button
               variant="default"
               size="icon"
               className="w-12 h-12"
@@ -125,9 +125,9 @@ export default function TextInput({ language }: TextInputProps) {
             >
               <i className="fas fa-microphone"></i>
             </Button>
-            <Button 
+            <Button
               variant="secondary"
-              size="icon" 
+              size="icon"
               className="w-12 h-12"
               data-testid="button-open-settings"
             >
@@ -135,7 +135,7 @@ export default function TextInput({ language }: TextInputProps) {
             </Button>
           </div>
         </div>
-        
+
         {/* Quick Command Suggestions */}
         <div className="flex flex-wrap gap-2 mt-3">
           {quickCommands.map((cmd, index) => (

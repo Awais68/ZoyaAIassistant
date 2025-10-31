@@ -303,8 +303,8 @@ export default function Dashboard({ data, currentDate, language }: DashboardProp
               )}
             </div>
 
-            <Button 
-              variant="secondary" 
+            <Button
+              variant="secondary"
               className="w-full mt-4"
               data-testid="button-compose-email"
               onClick={() => quickActionMutation.mutate("email")}
