@@ -56,6 +56,14 @@ export default function TextInput({ language }: TextInputProps) {
 
   const useQuickCommand = (command: string) => {
     setInput(command);
+    // Auto-submit the quick command after a small delay
+    setTimeout(() => {
+      processCommandMutation.mutate({
+        input: command,
+        language,
+        inputType: "text"
+      });
+    }, 100);
   };
 
   const quickCommands = [

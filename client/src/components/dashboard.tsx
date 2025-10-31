@@ -4,6 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useTextToSpeech } from "@/hooks/use-text-to-speech";
 
 interface DashboardProps {
   data: any;
@@ -12,6 +16,9 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ data, currentDate, language }: DashboardProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { speak } = useTextToSpeech({ language });
   const { data: commandHistory } = useQuery({
     queryKey: ['/api/commands/history'],
   });
@@ -26,6 +33,85 @@ export default function Dashboard({ data, currentDate, language }: DashboardProp
 
   const { data: pendingTasks } = useQuery({
     queryKey: ['/api/tasks/pending'],
+  });
+
+  // Mutation for creating a new task
+  const createTaskMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/commands/process", {
+        input: language === "ur"
+          ? "نیا کام شامل کریں"
+          : language === "roman-ur"
+            ? "Naya kaam shamil karo"
+            : "Create a new task",
+        language,
+        inputType: "text"
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Success",
+        description: "Task creation initiated. What would you like to add?",
+      });
+      if (data.response) {
+        speak(data.response);
+      }
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks/pending'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Could not create task. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Mutation for quick actions
+  const quickActionMutation = useMutation({
+    mutationFn: async (action: string) => {
+      const actionCommands: Record<string, string> = {
+        schedule: language === "ur"
+          ? "نیا ملاقات شامل کریں"
+          : language === "roman-ur"
+            ? "Naya meeting shamil karo"
+            : "Schedule a new meeting",
+        email: language === "ur"
+          ? "ای میل لکھیں"
+          : language === "roman-ur"
+            ? "Email likho"
+            : "Compose an email",
+        reminder: language === "ur"
+          ? "ریمائنڈر سیٹ کریں"
+          : language === "roman-ur"
+            ? "Reminder set karo"
+            : "Set a reminder",
+      };
+      const response = await apiRequest("POST", "/api/commands/process", {
+        input: actionCommands[action] || "Help me",
+        language,
+        inputType: "text"
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.response) {
+        speak(data.response);
+      }
+      queryClient.invalidateQueries({ queryKey: ['/api/dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tasks/pending'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/calendar/today'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/emails/unread'] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Could not process action. Please try again.",
+        variant: "destructive",
+      });
+    }
   });
 
   const formatTime = (dateString: string) => {
@@ -61,7 +147,7 @@ export default function Dashboard({ data, currentDate, language }: DashboardProp
               {currentDate}
             </span>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-500">
               <div className="flex items-center justify-between">
@@ -74,7 +160,7 @@ export default function Dashboard({ data, currentDate, language }: DashboardProp
                 <i className="fas fa-calendar-day text-blue-500 text-xl"></i>
               </div>
             </div>
-            
+
             <div className="bg-orange-50 rounded-lg p-4 border-l-4 border-orange-500">
               <div className="flex items-center justify-between">
                 <div>
@@ -86,7 +172,7 @@ export default function Dashboard({ data, currentDate, language }: DashboardProp
                 <i className="fas fa-envelope text-orange-500 text-xl"></i>
               </div>
             </div>
-            
+
             <div className="bg-green-50 rounded-lg p-4 border-l-4 border-green-500">
               <div className="flex items-center justify-between">
                 <div>
@@ -113,7 +199,7 @@ export default function Dashboard({ data, currentDate, language }: DashboardProp
                     {data.nextMeeting.time}
                   </p>
                 </div>
-                <Button 
+                <Button
                   size="sm"
                   data-testid="button-join-meeting"
                 >
@@ -127,7 +213,7 @@ export default function Dashboard({ data, currentDate, language }: DashboardProp
 
       {/* Main Dashboard Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
+
         {/* Calendar Widget */}
         <Card data-testid="calendar-widget">
           <CardContent className="p-6">
@@ -140,12 +226,12 @@ export default function Dashboard({ data, currentDate, language }: DashboardProp
                 View All
               </Button>
             </div>
-            
+
             {/* Upcoming Events */}
             <div className="space-y-3">
               {upcomingEvents?.slice(0, 5).map((event: any, index: number) => (
-                <div 
-                  key={event.id} 
+                <div
+                  key={event.id}
                   className="flex items-center space-x-3 p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors"
                   data-testid={`event-item-${index}`}
                 >
@@ -165,10 +251,12 @@ export default function Dashboard({ data, currentDate, language }: DashboardProp
               )}
             </div>
 
-            <Button 
-              variant="secondary" 
+            <Button
+              variant="secondary"
               className="w-full mt-4"
               data-testid="button-schedule-new"
+              onClick={() => quickActionMutation.mutate("schedule")}
+              disabled={quickActionMutation.isPending}
             >
               + Schedule New Meeting
             </Button>
@@ -187,11 +275,11 @@ export default function Dashboard({ data, currentDate, language }: DashboardProp
                 View All
               </Button>
             </div>
-            
+
             {/* Email List */}
             <div className="space-y-3">
               {recentEmails?.slice(0, 5).map((email: any, index: number) => (
-                <div 
+                <div
                   key={email.id}
                   className="p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors cursor-pointer"
                   data-testid={`email-item-${index}`}
@@ -219,6 +307,8 @@ export default function Dashboard({ data, currentDate, language }: DashboardProp
               variant="secondary" 
               className="w-full mt-4"
               data-testid="button-compose-email"
+              onClick={() => quickActionMutation.mutate("email")}
+              disabled={quickActionMutation.isPending}
             >
               + Compose Email
             </Button>
@@ -237,16 +327,16 @@ export default function Dashboard({ data, currentDate, language }: DashboardProp
                 View All
               </Button>
             </div>
-            
+
             {/* Task List */}
             <div className="space-y-3">
               {pendingTasks?.slice(0, 5).map((task: any, index: number) => (
-                <div 
+                <div
                   key={task.id}
                   className="flex items-center space-x-3 p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors"
                   data-testid={`task-item-${index}`}
                 >
-                  <Checkbox 
+                  <Checkbox
                     checked={task.completed}
                     data-testid={`task-checkbox-${index}`}
                   />
@@ -272,10 +362,12 @@ export default function Dashboard({ data, currentDate, language }: DashboardProp
               )}
             </div>
 
-            <Button 
-              variant="secondary" 
+            <Button
+              variant="secondary"
               className="w-full mt-4"
               data-testid="button-add-task"
+              onClick={() => createTaskMutation.mutate()}
+              disabled={createTaskMutation.isPending}
             >
               + Add New Task
             </Button>
@@ -294,11 +386,11 @@ export default function Dashboard({ data, currentDate, language }: DashboardProp
                 Clear
               </Button>
             </div>
-            
+
             {/* Command List */}
             <div className="space-y-3 max-h-64 overflow-y-auto scrollbar-hide">
               {commandHistory?.slice(0, 10).map((command: any, index: number) => (
-                <div 
+                <div
                   key={command.id}
                   className="p-3 bg-muted rounded-lg"
                   data-testid={`command-item-${index}`}

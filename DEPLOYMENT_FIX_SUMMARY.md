@@ -9,30 +9,35 @@ Your Vercel deployment was returning **405 Method Not Allowed** when calling `/a
 ## What Was Fixed
 
 ### 1. **tsconfig.json** - Added API folder to compilation
+
 ```diff
 - "include": ["client/src/**/*", "shared/**/*", "server/**/*"],
 + "include": ["client/src/**/*", "shared/**/*", "server/**/*", "api/**/*"],
 ```
 
 ### 2. **vercel.json** - Improved routing configuration
+
 - Added explicit HTTP methods to API routes
 - Properly configured static file serving alongside API functions
 
 ### 3. **Created Diagnostics**
+
 - Added `/api/test.ts` endpoint for basic connectivity testing
 - Created troubleshooting guides with testing commands
 
 ## Verification ✅
 
 I tested locally and confirmed:
+
 ```
 ✅ API endpoint responds correctly
-✅ Commands are processed successfully  
+✅ Commands are processed successfully
 ✅ Responses are returned with proper format
 ✅ TypeScript compiles without errors (for api/ files)
 ```
 
 **Sample response from `/api/commands/process`:**
+
 ```json
 {
   "success": true,
@@ -59,11 +64,13 @@ I tested locally and confirmed:
 ## What You Need To Do Now
 
 ### Step 1: Wait for Vercel Deployment (1-2 minutes)
+
 - All changes have been pushed to GitHub
 - Vercel will automatically rebuild and deploy
 - Check progress: https://vercel.com/dashboard → Select your project → Deployments
 
 ### Step 2: Verify Deployment Protection is DISABLED
+
 **⚠️ IMPORTANT**: Even though we fixed the API routing, Deployment Protection can still block requests:
 
 1. Go to https://vercel.com/dashboard
@@ -73,33 +80,35 @@ I tested locally and confirmed:
 5. Save and wait 30 seconds
 
 ### Step 3: Test in Your Browser Console
+
 Once deployed, run this test:
 
 ```javascript
 // Test 1: Check if basic API routing works
-fetch('/api/test')
-  .then(r => r.json())
-  .then(data => {
-    console.log('✅ Test endpoint:', data);
-    if (data.success) console.log('API routing is working!');
+fetch("/api/test")
+  .then((r) => r.json())
+  .then((data) => {
+    console.log("✅ Test endpoint:", data);
+    if (data.success) console.log("API routing is working!");
   })
-  .catch(e => console.error('❌ Error:', e));
+  .catch((e) => console.error("❌ Error:", e));
 
 // Test 2: Process a command
-fetch('/api/commands/process', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ input: 'hello', language: 'en' })
+fetch("/api/commands/process", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ input: "hello", language: "en" }),
 })
-  .then(r => r.json())
-  .then(data => {
-    console.log('✅ Command response:', data);
-    console.log('Response:', data.response);
+  .then((r) => r.json())
+  .then((data) => {
+    console.log("✅ Command response:", data);
+    console.log("Response:", data.response);
   })
-  .catch(e => console.error('❌ Error:', e));
+  .catch((e) => console.error("❌ Error:", e));
 ```
 
 **Expected output:**
+
 - ✅ `/api/test` returns `{ success: true, message: "API test endpoint is working!" }`
 - ✅ `/api/commands/process` returns processed command with response text
 - ✅ Voice playback starts (using TextToSpeech API)
@@ -110,16 +119,19 @@ fetch('/api/commands/process', {
 **Diagnostic Checklist:**
 
 1. **Is Deployment Protection disabled?**
+
    - Go to Settings → Security → Deployment Protection
    - Must be set to "Disabled"
    - Save if changed, wait 30 seconds
 
 2. **Has Vercel finished deploying?**
+
    - Check Deployments page
    - Look for green checkmark and "Ready" status
    - If still building, wait 1-2 more minutes
 
 3. **Check browser console for CORS errors**
+
    - Open DevTools (F12) → Console tab
    - Look for red error messages
    - If you see CORS error, share it and we can fix it
@@ -132,6 +144,7 @@ fetch('/api/commands/process', {
    - Share any error messages
 
 ## Files Changed
+
 - ✅ `tsconfig.json` - Added `api/**/*` to include
 - ✅ `vercel.json` - Improved routing
 - ✅ `api/test.ts` - New diagnostic endpoint
@@ -141,6 +154,7 @@ fetch('/api/commands/process', {
 ## Why This Fixes It
 
 **The Chain of Events:**
+
 1. ❌ Before: `api/` folder excluded from `tsconfig.json`
    → Vercel can't type-check TypeScript files
    → Vercel doesn't deploy API functions

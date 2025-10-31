@@ -114,10 +114,10 @@ function fallbackCommandProcessing(input: string, language: string): AIResponse 
             confidence: 0.3,
         },
         response: language === 'ur'
-            ? 'معذرت، میں آپ کی مدد کرنے کی کوشش کر رہی ہوں۔ براہ کرم زیادہ تفصیل سے بتائیں'
+            ? 'میں آپ کی خدمت کے لیے یہاں ہوں۔ براہ کرم مجھے تھوڑی مزید معلومات دیں تاکہ میں بہتر طریقے سے آپ کی مدد کر سکوں'
             : language === 'roman-ur'
-                ? 'Maazrat, main aap ki madad karne ki koshish kar rahi hun. Meherbani karke zyada tafseel se batayein'
-                : "I'm here to help! Could you please be more specific about what you need?",
+                ? 'Main aapki khidmat ke liye yahan hoon. Meherbani karke mujhe thodi aur maloomat dein taki main behtar tareeqay se aapki madad kar sakun'
+                : "I'd be delighted to help! Would you mind sharing a bit more detail so I can assist you better?",
         language,
     };
 }
